@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/SnakeGARD.png" alt="SnakeGARD Logo" width="25%">
+  <img src="assets/SnakeGARD.png" alt="SnakeGARD Logo" width="50%">
 </p>
 
 <p align="center">
