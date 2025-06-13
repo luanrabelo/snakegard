@@ -32,7 +32,7 @@ results/*
 output/*
 # Ignore Snakemake input files
 input/*
-# Ignore Snakemake mworkflow files
-mworkflow/*
+# Ignore Snakemake workflow files
+workflow/*
 # Ignore Singularity cache
 *.simg
