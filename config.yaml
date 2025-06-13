@@ -1,0 +1,23 @@
+container_dir: "workflow/containers"
+
+containers:
+  trinity: "https://data.broadinstitute.org/Trinity/TRINITY_SINGULARITY/trinityrnaseq.v2.15.2.simg"
+  mitoz: "https://www.dropbox.com/scl/fo/40jgsbnoocqr9qyns7tql/AB3QgelqF1Uex_90OSwR9MA?rlkey=mw03ho8uwwomr7amw1ru430o1&e=1&dl=1"
+
+
+params:
+  fastp:
+    length_required: 100
+    qualified_quality_phred: 25
+  mitoz:
+    clade: "Chordata"
+    genetic_code: 2
+
+samples:
+  - species: "Anaxyrus_microscaphus"
+    sra:
+      - id: "SRR18432214"
+        reference_type: "mitochondrion"
+        reference: "NC_047224.1"
+        mapper: "bowtie2"
+        assembler: "trinity"

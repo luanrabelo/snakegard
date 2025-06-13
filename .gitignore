@@ -1,0 +1,38 @@
+.snakemake/*
+
+# Ignore Snakemake logs
+logs/*
+# Ignore Snakemake checkpoints
+checkpoints/*
+# Ignore Snakemake temp files
+temp/*
+# Ignore Snakemake reports
+reports/*
+# Ignore Snakemake profiles
+profiles/*
+# Ignore Snakemake scripts
+scripts/*
+# Ignore Snakemake config files
+config/*
+# Ignore Snakemake data files
+data/*
+# Ignore Snakemake environment files
+envs/*
+# Ignore Snakemake wrapper files
+wrappers/*
+# Ignore Snakemake modules
+modules/*
+# Ignore Snakemake rules
+rules/*
+# Ignore Snakemake resources
+resources/*
+# Ignore Snakemake results
+results/*
+# Ignore Snakemake output files
+output/*
+# Ignore Snakemake input files
+input/*
+# Ignore Snakemake mworkflow files
+mworkflow/*
+# Ignore Singularity cache
+*.simg

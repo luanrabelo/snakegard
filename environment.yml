@@ -4,9 +4,14 @@ channels:
   - conda-forge
   - defaults
 dependencies:
-  - python==3.12
+  - python=3.12
   - pip
   - snakemake
-  - sra-tools
-  - fastp
+  - singularity
+  - wget
+  - unzip
   - entrez-direct
+  - sra-tools
+  - fastqc
+  - fastp
+  - multiqc
