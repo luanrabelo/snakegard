@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/SnakeGARD.png" alt="SnakeGARD Logo" width="80%">
+  <img src="assets/SnakeGARD.png" alt="SnakeGARD Logo" width="75%">
 </p>
 
 <p align="center">
@@ -41,13 +41,21 @@ SnakeGARD follows a comprehensive workflow that includes:
 1. **Data Acquisition**: Automatic download of reference sequences and RNA-Seq data from NCBI
 2. **Quality Control**: FastQC analysis of raw and trimmed reads
 3. **Read Preprocessing**: Adapter trimming and quality filtering using fastp
-4. **Mapping**: Alignment of trimmed reads to reference sequences using Bowtie2, BWA, or STAR
-5. **Assembly**: De novo assembly of mapped reads using various assemblers (SPAdes, Trinity, MitoZ)
-6. **Quality Assessment**: Comprehensive quality reporting with MultiQC
+4. **Mapping**: Alignment of trimmed reads to reference sequences using your choice of mapper:
+   - **Bowtie2**: Performs both local and end-to-end mapping for better sensitivity
+   - **BWA**: For standard short read mapping
+   - **STAR**: Optimized for RNA-Seq data
+5. **Assembly**: De novo assembly of mapped reads using:
+   - **SPAdes**: General-purpose assembler for small genomes
+   - **Trinity**: Specialized for transcriptome assembly
+   - **MitoZ**: Optimized for mitochondrial genome assembly
+6. **Quality Assessment**: Comprehensive quality reporting with species-specific MultiQC reports
 
 ## Features
 
 - **Fully Automated**: From data download to assembly with minimal user intervention
+- **Robust Error Handling**: Automatic retries for downloads, detailed logging, and temp file management
+- **Hierarchical Organization**: Results are organized by species, sample, reference, mapper, and assembler
 - **Containerized**: Uses Singularity/Apptainer containers for reproducibility
 - **Flexible**: Supports multiple mappers and assemblers
 - **Scalable**: Efficiently processes multiple samples in parallel
@@ -125,7 +133,7 @@ samples:
         reference_type: "mitochondrion"
         reference: "NC_047224.1"
         mapper: "bowtie2"
-        assembler: "mitoz"
+        assembler: "trinity"
 ```
 
 ### Configuration Parameters
@@ -174,33 +182,44 @@ snakemake --use-conda --use-singularity --cores <number_of_cores> --rerun-incomp
 
 ## Pipeline Output
 
-SnakeGARD organizes results in the `results/` directory with the following structure:
+SnakeGARD organizes results in the `results/` directory with the following hierarchical structure:
 
 - **00-references/**: Reference sequences downloaded from NCBI
-- **01-raw_data/**: Raw FASTQ files from SRA
-- **02-fastqc_raw/**: FastQC reports for raw reads
-- **03-trim_data/**: Trimmed FASTQ files
+- **01-raw_data/**: Raw FASTQ files from SRA, organized by species
+- **02-fastqc_raw/**: FastQC reports for raw reads, organized by species
+- **03-trim_data/**: Trimmed FASTQ files and fastp logs
 - **04-fastqc_trimmed/**: FastQC reports for trimmed reads
-- **05-multiqc/**: Aggregated quality control reports
-- **06-mapping/**: Mapping results (BAM files)
-- **07-assembly/**: Final assembly results (FASTA files)
+- **05-multiqc/**: Species-specific aggregated quality control reports
+- **06-mapping/**:
+  - **index/**: Reference genome indexes by mapper
+  - **bams/{species}/{sra}/{reference}/{mapper}/**: Mapped reads (BAM files)
+  - **logs/**: Detailed mapping logs
+- **07-assembly/{species}/{sra}/{reference}/{mapper}/{assembler}/**: Final assembly results
+
+This hierarchical organization allows for multiple approaches to be tried on the same data, with clear separation between results.
 
 # Customization
 ##### [:rocket: Go to Contents Overview](#contents-overview)
 
 ## Advanced Configuration Options
 
-You can customize SnakeGARD by modifying the following:
+You can customize SnakeGARD through the following options:
+
+### Logging Control
+
+SnakeGARD provides detailed logging for all steps. Logs are stored in a hierarchical structure within each result directory.
+
+### Error Handling and Retries
+
+For reference download operations, SnakeGARD automatically retries up to 3 times with increasing delays to handle transient network issues.
 
 ### Resource Allocation
 
-Control the number of threads used by each rule in the Snakefile:
+You can control the resource allocation for specific steps:
 
-```yaml
-# Add to config.yaml
-resources:
-  mapping_threads: 16
-  assembly_threads: 32
+```bash
+# Adjust threads for specific rules
+snakemake --set-threads download_sra=4 map_reads=16 assemble_contigs=32
 ```
 
 ### Custom Containers
@@ -213,14 +232,23 @@ containers:
   custom_assembler: "https://path/to/your/container.sif"
 ```
 
-## Using Different Assemblers
+## Using Different Assemblers and Mappers
 
-SnakeGARD supports multiple assemblers that can be specified in the `config.yaml`:
+### Mappers
 
-- **SPAdes**: General-purpose assembler for small genomes
-- **RNASPAdes**: Assembler optimized for transcriptome data
-- **MitoZ**: Specialized for mitochondrial genome assembly
-- **Trinity**: Transcriptome assembler
+The pipeline supports three different mappers:
+
+- **bowtie2**: Default mapper that runs both local and end-to-end mapping for maximum sensitivity
+- **bwa**: BWA MEM algorithm for standard short read mapping
+- **star**: Optimized for RNA-Seq data with spliced alignment support
+
+### Assemblers
+
+You can specify one of the following assemblers for each sample:
+
+- **spades**: General-purpose assembler for small genomes
+- **trinity**: Optimized for transcriptome assembly from RNA-Seq data
+- **mitoz**: Specialized for mitochondrial genome assembly with taxonomic awareness
 
 # Troubleshooting
 ##### [:rocket: Go to Contents Overview](#contents-overview)
