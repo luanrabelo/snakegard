@@ -1,0 +1,131 @@
+
+import logging
+import os
+import subprocess
+import tempfile
+import shutil
+import time
+
+configfile: "config.yaml"
+
+def setup_logger(name):
+    """Function to configure a logger to write to a file and the console."""
+    logger = logging.getLogger(name)
+    logger.setLevel(logging.INFO)
+    
+    if logger.hasHandlers():
+        logger.handlers.clear()
+
+    formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
+    
+    console_handler = logging.StreamHandler()
+    console_handler.setFormatter(formatter)
+    logger.addHandler(console_handler)
+    
+    return logger
+
+def get_all_target_files():
+    pass
+
+
+SAMPLES = []
+for entry in config["samples"]:
+    species = entry["species"].replace(" ", "_")
+    for sample in entry["sra"]:
+        SAMPLES.append((species, sample["id"], sample["reference"], sample["mapper"]))
+
+include: "rules/download_fastq_raw_reads.smk"
+include: "rules/compress_fastq_raw_reads.smk"
+include: "rules/fastqc_raw_reads.smk"
+include: "rules/trim_fastq_raw_reads.smk"
+include: "rules/fastqc_trimmed_reads.smk"
+include: "rules/download_reference.smk"
+include: "rules/index_reference.smk"
+
+rule all:
+    input:
+        #get_all_target_files()
+        # Usar SAMPLES ao invés de produto cartesiano
+        [f"results/01-raw_data/{species}/{sra}_R1.fastq.gz" for species, sra, reference, mapper in SAMPLES],
+        [f"results/01-raw_data/{species}/{sra}_R2.fastq.gz" for species, sra, reference, mapper in SAMPLES],
+        # FastQC reports for raw data
+        [f"results/02-fastqc_raw/{species}/{sra}_R1_fastqc.html" for species, sra, reference, mapper in SAMPLES],
+        [f"results/02-fastqc_raw/{species}/{sra}_R1_fastqc.zip" for species, sra, reference, mapper in SAMPLES],
+        [f"results/02-fastqc_raw/{species}/{sra}_R2_fastqc.html" for species, sra, reference, mapper in SAMPLES],
+        [f"results/02-fastqc_raw/{species}/{sra}_R2_fastqc.zip" for species, sra, reference, mapper in SAMPLES],
+        # Trimmed reads
+        [f"results/03-trim_data/{species}/{sra}_R1.trimmed.fastq.gz" for species, sra, reference, mapper in SAMPLES],
+        [f"results/03-trim_data/{species}/{sra}_R2.trimmed.fastq.gz" for species, sra, reference, mapper in SAMPLES],
+        [f"results/03-trim_data/{species}/fastp/{sra}.fastp.html" for species, sra, reference, mapper in SAMPLES],
+        [f"results/03-trim_data/{species}/fastp/{sra}.fastp.json" for species, sra, reference, mapper in SAMPLES],
+        # FastQC reports for trimmed data
+        [f"results/04-fastqc_trimmed/{species}/{sra}_R1.trimmed_fastqc.html" for species, sra, reference, mapper in SAMPLES],
+        [f"results/04-fastqc_trimmed/{species}/{sra}_R1.trimmed_fastqc.zip" for species, sra, reference, mapper in SAMPLES],
+        [f"results/04-fastqc_trimmed/{species}/{sra}_R2.trimmed_fastqc.html" for species, sra, reference, mapper in SAMPLES],
+        [f"results/04-fastqc_trimmed/{species}/{sra}_R2.trimmed_fastqc.zip" for species, sra, reference, mapper in SAMPLES],
+        # Reference genomes
+        [f"results/06-mapping/{species}/{sra}/index/{reference}_{mapper}/index.done" for species, sra, reference, mapper in SAMPLES],
+        [f"results/06-mapping/{species}/{sra}/bam/{species}_{reference}_{mapper}_mapped.bam" for species, sra, reference, mapper in SAMPLES],
+
+
+rule map_reads:
+    """
+    Maps trimmed reads to the reference. For bowtie2, it runs both --local and
+    --end-to-end modes and merges the results.
+    """
+    input:
+        r1="results/03-trim_data/{species}/{sra}_R1.trimmed.fastq.gz",
+        r2="results/03-trim_data/{species}/{sra}_R2.trimmed.fastq.gz",
+        idx_done="results/06-mapping/{species}/{sra}/index/{reference}_{mapper}/index.done"
+    output:
+        bam="results/06-mapping/{species}/{sra}/bam/{species}_{reference}_{mapper}_mapped.bam"
+    threads: 8
+    run:
+        logger = setup_logger(f"map_reads_{wildcards.sra}_{wildcards.reference}_{wildcards.mapper}")
+        
+        try:
+            mapper = wildcards.mapper
+            reference = wildcards.reference
+            ref_prefix = f"results/06-mapping/{wildcards.species}/{wildcards.sra}/index/{wildcards.reference}_{wildcards.mapper}/{wildcards.reference}"
+            #star_index_dir = f"results/06-mapping/index/{reference}_{mapper}/"
+            
+            logger.info(f"Mapping reads for {wildcards.sra} to {reference} using {mapper}.")
+            map_cmd = ""
+            
+            with tempfile.TemporaryDirectory() as tmp_dir:
+                if mapper == "bowtie2":
+                    logger.info("Bowtie2 mode: running --local and --end-to-end mappings.")
+                    
+                    local_bam = os.path.join(tmp_dir, "local.bam")
+                    e2e_bam = os.path.join(tmp_dir, "end_to_end.bam")
+
+                    local_cmd = f"bowtie2 --local -p {threads} -x {ref_prefix} -1 {input.r1} -2 {input.r2} | samtools view -bS - > {local_bam}"
+                    e2e_cmd = f"bowtie2 --end-to-end -p {threads} -x {ref_prefix} -1 {input.r1} -2 {input.r2} | samtools view -bS - > {e2e_bam}"
+                    subprocess.run(local_cmd, shell=True, check=True, executable='/bin/bash')
+                    subprocess.run(e2e_cmd, shell=True, check=True, executable='/bin/bash')
+                    
+                    logger.info("Merging bowtie2 results.")
+                    map_cmd = f"samtools merge -u -@ {threads} - {local_bam} {e2e_bam}"
+
+                #elif mapper == "bwa":
+                #    map_cmd = f"bwa mem -t {threads} {ref_prefix} {input.r1} {input.r2}"
+                #
+                #elif mapper == "star":
+                #    star_prefix = os.path.join(tmp_dir, "star_")
+                #    star_run_cmd = f"STAR --runThreadN {threads} --genomeDir {star_index_dir} --readFilesIn {input.r1} {input.r2} --readFilesCommand zcat --outSAMtype BAM Unsorted --outFileNamePrefix {star_prefix}"
+                #    subprocess.run(star_run_cmd, shell=True, check=True)
+                #    map_cmd = f"cat {star_prefix}Aligned.out.bam"
+#
+                #logger.info("Filtering for mapped reads, sorting, and writing final BAM.")
+                full_command = (
+                    f"{map_cmd} | "
+                    f"samtools view -@ {threads} -F 4 -b - | "
+                    f"samtools sort -@ {threads} -o {output.bam}"
+                )
+                subprocess.run(full_command, shell=True, check=True, executable='/bin/bash')
+                subprocess.run(["samtools", "index", output.bam], check=True)
+
+            logger.info(f"Successfully created final mapped BAM for {wildcards.sra}.")
+        except Exception as e:
+            logger.error(f"Mapping failed for {wildcards.sra}: {e}")
+            raise e

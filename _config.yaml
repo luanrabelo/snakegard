@@ -1,0 +1,25 @@
+#container_dir: "workflow/containers"
+
+#containers:
+#  trinity: "https://data.broadinstitute.org/Trinity/TRINITY_SINGULARITY/trinityrnaseq.v2.15.2.simg"
+#  mitoz: "https://www.dropbox.com/scl/fo/40jgsbnoocqr9qyns7tql/AB3QgelqF1Uex_90OSwR9MA?rlkey=mw03ho8uwwomr7amw1ru430o1&e=1&dl=1"
+
+
+samples:
+  - species: "Mus musculus"
+    sra:
+      - id: "SRR594407"
+        reference_type: "mitochondrion"
+        reference: "NC_005089.1"
+        mapper: "bowtie2"
+        #assembler: "trinity"
+
+params:
+  fastp:
+    length_required: 75
+    qualified_quality_phred: 25
+    compression: 9
+    --trim_front1: 15
+    --trim_front2: 15
+    --trim_tail1: 10
+    --trim_tail2: 10

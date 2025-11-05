@@ -5,6 +5,12 @@ samples:
         reference: NC_042819.1
         reference_type: chloroplast
         mapper: bowtie2
+  - species: Manihot esculenta
+    sra:
+      - id: SRR23479997
+        reference: NC_045136.1
+        reference_type: chloroplast
+        mapper: bowtie2
   - species: Avicennia schaueriana
     sra:
       - id: SRR7404997
