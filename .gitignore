@@ -37,3 +37,4 @@ input/*
 results/
 tmp/
 .snakemake/
+apikeys.env

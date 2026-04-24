@@ -41,6 +41,7 @@ include: "rules/trim_fastq_raw_reads.smk"
 include: "rules/fastqc_trimmed_reads.smk"
 include: "rules/download_reference.smk"
 include: "rules/index_reference.smk"
+include: "rules/count_reads_stats.smk"
 
 rule all:
     input:

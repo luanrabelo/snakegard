@@ -4,8 +4,8 @@ rule trim_fastq_raw_reads:
         r1="results/01-raw_data/{species}/{sra}_R1.fastq.gz",
         r2="results/01-raw_data/{species}/{sra}_R2.fastq.gz"
     output:
-        r1_trim="results/03-trim_data/{species}/{sra}_R1.trimmed.fastq.gz",
-        r2_trim="results/03-trim_data/{species}/{sra}_R2.trimmed.fastq.gz",
+        r1_trim=temp("results/03-trim_data/{species}/{sra}_R1.trimmed.fastq.gz"),
+        r2_trim=temp("results/03-trim_data/{species}/{sra}_R2.trimmed.fastq.gz"),
         json="results/03-trim_data/{species}/fastp/{sra}.fastp.json",
         html="results/03-trim_data/{species}/fastp/{sra}.fastp.html"
     params:

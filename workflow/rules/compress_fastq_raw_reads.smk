@@ -8,8 +8,8 @@ rule compress_fastq_raw_reads:
         r1="results/01-raw_data/{species}/{sra}_R1.fastq",
         r2="results/01-raw_data/{species}/{sra}_R2.fastq"
     output:
-        r1_gz="results/01-raw_data/{species}/{sra}_R1.fastq.gz",
-        r2_gz="results/01-raw_data/{species}/{sra}_R2.fastq.gz"
+        r1_gz=temp("results/01-raw_data/{species}/{sra}_R1.fastq.gz"),
+        r2_gz=temp("results/01-raw_data/{species}/{sra}_R2.fastq.gz")
     threads: 4
     #benchmark:
     #    repeat("benchmarks/{species}/{sra}.compress_fastq_raw_reads.tsv", 5)
